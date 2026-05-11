@@ -38,3 +38,7 @@ export { ExportPanel } from './components/ExportPanel';
 
 // Style injection
 export { injectAnnotationKitStyles, removeAnnotationKitStyles } from './styles/inject';
+
+// Custom fabric shape registration (side-effect imports — must be evaluated before using ArrowDrawer/LabelDrawer)
+import './shapes/LineArrow';
+import './shapes/Label';

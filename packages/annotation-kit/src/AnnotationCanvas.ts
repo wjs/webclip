@@ -17,6 +17,107 @@ import type { IObjectDrawer } from './tools/IObjectDrawer';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from './constants';
 
 export class AnnotationCanvas {
+  // Register custom fabric shapes — this runs once when the class is first referenced
+  // and cannot be tree-shaken away since it's tied to the class definition
+  private static shapesRegistered = (() => {
+    // LineArrow — arrow shape with arrowhead triangle
+    fabric.LineArrow = fabric.util.createClass(fabric.Line, {
+      type: 'lineArrow',
+      initialize: function (element: any, options: any) {
+        options = options || {};
+        this.callSuper('initialize', element, options);
+      },
+      toObject: function () {
+        return fabric.util.object.extend(
+          this.callSuper('toObject'),
+          CustomProperty.reduce(
+            (cur: Record<string, unknown>, key: string) => ({ ...cur, [key]: this[key] }),
+            {},
+          ),
+        );
+      },
+      _render: function (ctx: CanvasRenderingContext2D) {
+        this.callSuper('_render', ctx);
+        if (this.width === 0 && this.height === 0 || !this.visible) return;
+        ctx.save();
+        const xDiff = this.x2 - this.x1;
+        const yDiff = this.y2 - this.y1;
+        const angle = Math.atan2(yDiff, xDiff);
+        ctx.translate(xDiff / 2, yDiff / 2);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(this.strokeWidth * 1.6, 0);
+        ctx.lineTo(-this.strokeWidth * 3, this.strokeWidth * 2.4);
+        ctx.lineTo(-this.strokeWidth * 3, -this.strokeWidth * 2.4);
+        ctx.closePath();
+        ctx.fillStyle = this.stroke;
+        ctx.fill();
+        ctx.restore();
+      },
+    });
+    fabric.LineArrow.fromObject = function (
+      object: fabric.ILineOptions & Record<string, unknown>,
+      callback: (obj: fabric.Object) => void,
+    ) {
+      callback(new fabric.LineArrow([object.x1!, object.y1!, object.x2!, object.y2!], object));
+    };
+    fabric.LineArrow.async = true;
+
+    // Label — callout with rounded rect background + triangle pointer
+    fabric.Label = fabric.util.createClass(fabric.IText, {
+      type: 'label',
+      initialize: function (text: string, options: any) {
+        options = options || {};
+        this.callSuper('initialize', text, options);
+      },
+      toObject: function () {
+        return fabric.util.object.extend(
+          this.callSuper('toObject'),
+          CustomProperty.reduce(
+            (cur: Record<string, unknown>, key: string) => ({ ...cur, [key]: this[key] }),
+            {},
+          ),
+        );
+      },
+      _render: function (ctx: CanvasRenderingContext2D) {
+        const textWidth = this.width;
+        const textHeight = this.height;
+        const pad = this.padding || 4;
+        const bw = Math.max(textWidth + pad * 2, 20);
+        const bh = Math.max(textHeight + pad * 2, 20);
+        const pointerW = Math.min(bw * 0.3, 12);
+        const pointerH = Math.min(bh * 0.25, 8);
+        ctx.save();
+        ctx.fillStyle = this.borderColor || '#3b82f6';
+        ctx.beginPath();
+        const r = 6;
+        ctx.moveTo(-bw / 2 + r, -bh / 2);
+        ctx.lineTo(bw / 2 - r, -bh / 2);
+        ctx.quadraticCurveTo(bw / 2, -bh / 2, bw / 2, -bh / 2 + r);
+        ctx.lineTo(bw / 2, bh / 2 - r);
+        ctx.quadraticCurveTo(bw / 2, bh / 2, bw / 2 - r, bh / 2);
+        ctx.lineTo(-bw / 2 + pointerW + r, bh / 2);
+        ctx.lineTo(-bw / 2 + pointerW, bh / 2 + pointerH);
+        ctx.lineTo(-bw / 2, bh / 2);
+        ctx.quadraticCurveTo(-bw / 2, bh / 2, -bw / 2, bh / 2 - r);
+        ctx.lineTo(-bw / 2, -bh / 2 + r);
+        ctx.quadraticCurveTo(-bw / 2, -bh / 2, -bw / 2 + r, -bh / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        this.callSuper('_render', ctx);
+      },
+    });
+    fabric.Label.fromObject = function (
+      object: any,
+      callback: (obj: fabric.Object) => void,
+    ) {
+      callback(new fabric.Label(object.text, object));
+    };
+    fabric.Label.async = true;
+    return true;
+  })();
+
   private canvas: fabric.Canvas;
   private undoRedoManager: UndoRedoManager;
   private drawers: Map<ToolType, IObjectDrawer>;
@@ -32,6 +133,8 @@ export class AnnotationCanvas {
   private boundKeyDown: (e: KeyboardEvent) => void;
   private boundObjectSelected: (e: fabric.IEvent) => void;
   private boundSelectionCleared: () => void;
+  private boundUndoEvent: () => void;
+  private boundRedoEvent: () => void;
 
   constructor(container: HTMLElement, canvasWidth?: number, canvasHeight?: number) {
     // Create canvas element inside container
@@ -68,6 +171,8 @@ export class AnnotationCanvas {
     this.boundKeyDown = this.onKeyDown.bind(this);
     this.boundObjectSelected = this.onObjectSelected.bind(this);
     this.boundSelectionCleared = this.onSelectionCleared.bind(this);
+    this.boundUndoEvent = () => this.undo();
+    this.boundRedoEvent = () => this.redo();
 
     this.initEventListeners();
     this.adjustCanvasZoom(container);
@@ -88,6 +193,8 @@ export class AnnotationCanvas {
     this.canvas.on('selection:updated', this.boundObjectSelected);
     this.canvas.on('selection:cleared', this.boundSelectionCleared);
     window.addEventListener('keydown', this.boundKeyDown);
+    document.addEventListener('ak-undo', this.boundUndoEvent);
+    document.addEventListener('ak-redo', this.boundRedoEvent);
   }
 
   private removeEventListeners(): void {
@@ -98,6 +205,8 @@ export class AnnotationCanvas {
     this.canvas.off('selection:updated', this.boundObjectSelected);
     this.canvas.off('selection:cleared', this.boundSelectionCleared);
     window.removeEventListener('keydown', this.boundKeyDown);
+    document.removeEventListener('ak-undo', this.boundUndoEvent);
+    document.removeEventListener('ak-redo', this.boundRedoEvent);
   }
 
   /** Scale canvas to fit container width */
@@ -204,6 +313,8 @@ export class AnnotationCanvas {
     }
 
     if (activeTool === ToolType.Select || activeTool === ToolType.Pen) {
+      // Pen: push snapshot before the stroke starts
+      if (activeTool === ToolType.Pen) this.pushUndoSnapshot();
       return; // fabric handles these
     }
 
@@ -224,6 +335,8 @@ export class AnnotationCanvas {
       originY: pointer.y,
     }).then((obj) => {
       if (!obj) return;
+      // Push snapshot BEFORE adding the object (saves "before" state for undo)
+      this.pushUndoSnapshot();
       obj.set({ oid: nanoid(), toolType: drawer.toolType } as Partial<fabric.Object>);
       this.canvas.add(obj);
       this.currentObject = obj;
@@ -270,8 +383,6 @@ export class AnnotationCanvas {
         (obj.width === 0 || obj.height === 0)
       ) {
         this.canvas.remove(obj);
-      } else {
-        this.pushUndoSnapshot();
       }
     }
 
