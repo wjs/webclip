@@ -25,6 +25,8 @@ jobs:
 
       - run: pnpm --filter annotation-kit build
 
+      - run: pnpm install
+
       - run: pnpm build
 
       - name: Package extension
