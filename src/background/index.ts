@@ -24,7 +24,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === 'REQUEST_SCREENSHOT') {
+  if (message.type === 'REQUEST_SCREENSHOT' || message.type === 'CAPTURE_STEP') {
     chrome.tabs.captureVisibleTab(undefined as unknown as number, { format: 'png' }, (dataUrl) => {
       if (chrome.runtime.lastError) {
         sendResponse({ error: chrome.runtime.lastError.message });

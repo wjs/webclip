@@ -2,7 +2,7 @@
 
 // Types (values: enums, const arrays; types: interfaces)
 export { ToolType, CursorMode, OperationType, CustomProperty, Direction } from './types';
-export type { DrawingStyle, Operation, ScreenshotProvider, ExportConfig } from './types';
+export type { DrawingStyle, Operation, ScreenshotProvider, ExportConfig, LongScreenshotOptions, LongScreenshotResult, LongScreenshotProgress } from './types';
 
 // Constants
 export { COLOR_MAP, WEIGHT_MAP, FONT_SIZE_MAP, DEFAULT_DRAWING_STYLE, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from './constants';
@@ -26,6 +26,10 @@ export { useDrawingTool } from './hooks/useDrawingTool';
 export { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 export { useSelection } from './hooks/useSelection';
 export { useExport } from './hooks/useExport';
+export { useLongScreenshot } from './hooks/useLongScreenshot';
+
+// Utils
+export { cropScreenshot, stitchVertically } from './utils/stitchImages';
 
 // Components
 export { AnnotationOverlay } from './components/AnnotationOverlay';

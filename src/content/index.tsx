@@ -4,6 +4,8 @@ import { injectAnnotationKitStyles, ScreenshotProviderWrapper } from 'annotation
 import type { ScreenshotProvider } from 'annotation-kit';
 import { OverlayContainer } from './OverlayContainer';
 
+const SCROLL_DELAY_MS = 150;
+
 // Chrome extension's screenshot provider — wraps chrome.runtime.sendMessage
 const chromeScreenshotProvider: ScreenshotProvider = {
   captureScreenshot: (): Promise<string | null> =>
@@ -19,6 +21,23 @@ const chromeScreenshotProvider: ScreenshotProvider = {
           }
         },
       );
+    }),
+  captureScreenshotAtScroll: (scrollY: number): Promise<string | null> =>
+    new Promise((resolve) => {
+      window.scrollTo(0, scrollY);
+      setTimeout(() => {
+        chrome.runtime.sendMessage(
+          { type: 'CAPTURE_STEP' },
+          (response) => {
+            if (response?.error) {
+              console.error('Screenshot step capture failed:', response.error);
+              resolve(null);
+            } else {
+              resolve(response?.dataUrl ?? null);
+            }
+          },
+        );
+      }, SCROLL_DELAY_MS);
     }),
 };
 

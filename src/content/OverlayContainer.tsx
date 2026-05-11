@@ -1,11 +1,19 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { AreaSelector, AnnotationOverlay, AnnotationToolbar, useExport, useAnnotationStore } from 'annotation-kit';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  AreaSelector,
+  AnnotationOverlay,
+  AnnotationToolbar,
+  useExport,
+  useAnnotationStore,
+  useLongScreenshot,
+} from 'annotation-kit';
+import type { LongScreenshotResult, LongScreenshotProgress } from 'annotation-kit';
 
 interface OverlayContainerProps {
   onClose: () => void;
 }
 
-type Phase = 'selecting' | 'annotating';
+type Phase = 'selecting' | 'annotating' | 'longCapturing' | 'longResult';
 
 export const OverlayContainer: React.FC<OverlayContainerProps> = ({
   onClose,
@@ -18,16 +26,33 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     height: number;
   } | null>(null);
   const [saving, setSaving] = useState(false);
-  const { exportSelectedAreaPng, copyToClipboard } = useExport('webclip');
+  const [longResult, setLongResult] = useState<LongScreenshotResult | null>(null);
+  const [longProgress, setLongProgress] = useState<LongScreenshotProgress>({
+    currentStep: 0,
+    totalSteps: 0,
+    isCapturing: false,
+  });
+  const annotationCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Lock page scroll while overlay is active
+  const { exportSelectedAreaPng, copyToClipboard } = useExport('webclip');
+  const { startLongScreenshot, stopLongScreenshot, abortLongScreenshot, progress } = useLongScreenshot();
+
+  // Sync long screenshot progress
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    setLongProgress(progress);
+  }, [progress]);
+
+  // Lock page scroll while overlay is active (except during long screenshot capture)
+  useEffect(() => {
+    if (phase === 'longCapturing') {
+      document.body.style.overflow = '';
+    } else {
+      document.body.style.overflow = 'hidden';
+    }
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = '';
     };
-  }, []);
+  }, [phase]);
 
   const handleAreaSelected = useCallback(
     (rect: { x: number; y: number; width: number; height: number }) => {
@@ -42,13 +67,20 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
   }, [onClose]);
 
   const handleClose = useCallback(() => {
+    if (phase === 'longCapturing') {
+      abortLongScreenshot();
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, phase, abortLongScreenshot]);
 
   const handleReSelect = useCallback(() => {
+    if (phase === 'longCapturing') {
+      abortLongScreenshot();
+    }
     setPhase('selecting');
     setSelectedRect(null);
-  }, []);
+    setLongResult(null);
+  }, [phase, abortLongScreenshot]);
 
   const handleCopy = useCallback(async () => {
     if (!selectedRect || saving) return;
@@ -84,6 +116,67 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     setSaving(false);
   }, [selectedRect, saving, exportSelectedAreaPng, onClose]);
 
+  // --- Long screenshot handlers ---
+  const handleLongScreenshot = useCallback(async () => {
+    if (!selectedRect) return;
+
+    // Save annotation canvas reference before hiding overlay
+    const canvasEl = document.querySelector('#ak-canvas') as HTMLCanvasElement | null;
+    const lowerCanvas = canvasEl?.parentElement?.querySelector('.lower-canvas') as HTMLCanvasElement | null;
+    annotationCanvasRef.current = lowerCanvas || canvasEl;
+
+    setPhase('longCapturing');
+
+    const result = await startLongScreenshot(
+      {
+        selectedRect,
+        scrollStep: selectedRect.height,
+        maxSteps: 50,
+      },
+      annotationCanvasRef.current,
+    );
+
+    if (result) {
+      setLongResult(result);
+      setPhase('longResult');
+    } else {
+      // Failed or aborted — go back to annotating
+      setPhase('annotating');
+    }
+  }, [selectedRect, startLongScreenshot]);
+
+  const handleStopLongScreenshot = useCallback(() => {
+    stopLongScreenshot();
+  }, [stopLongScreenshot]);
+
+  // Save long screenshot result as PNG
+  const handleSaveLong = useCallback(() => {
+    if (!longResult) return;
+    const link = document.createElement('a');
+    link.download = `webclip-long-${Date.now()}.png`;
+    link.href = longResult.dataUrl;
+    link.click();
+    onClose();
+  }, [longResult, onClose]);
+
+  // Copy long screenshot result to clipboard
+  const handleCopyLong = useCallback(async () => {
+    if (!longResult) return;
+    setSaving(true);
+    try {
+      // Convert data URL to blob and copy
+      const response = await fetch(longResult.dataUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob }),
+      ]);
+      onClose();
+    } catch (err) {
+      console.error('Copy long screenshot failed:', err);
+    }
+    setSaving(false);
+  }, [longResult, onClose]);
+
   // --- Phase 1: Area selection ---
   if (phase === 'selecting') {
     return (
@@ -91,6 +184,108 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
         onComplete={handleAreaSelected}
         onCancel={handleCancelSelection}
       />
+    );
+  }
+
+  // --- Phase: Long screenshot capturing ---
+  if (phase === 'longCapturing') {
+    return (
+      <div className="ak-long-progress">
+        <span>正在截取长截图... 第 {longProgress.currentStep} 步</span>
+        <button
+          onClick={handleStopLongScreenshot}
+          style={{
+            background: '#dc2626',
+            color: 'white',
+            padding: '6px 16px',
+            borderRadius: '6px',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
+        >
+          停止
+        </button>
+      </div>
+    );
+  }
+
+  // --- Phase: Long screenshot result ---
+  if (phase === 'longResult' && longResult) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 2147483647,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'auto',
+        }}
+      >
+        <div
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 20,
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          <h3 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 600 }}>
+            长截图完成 ({longResult.steps} 步, {longResult.width}×{longResult.height})
+          </h3>
+          <img
+            src={longResult.dataUrl}
+            alt="Long screenshot"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '60vh',
+              border: '1px solid #e5e7eb',
+              borderRadius: 4,
+            }}
+          />
+          <div
+            className="ak-actions"
+            style={{ marginTop: 16, justifyContent: 'center' }}
+          >
+            <button
+              onClick={handleSaveLong}
+              style={{ background: '#2563eb', color: 'white' }}
+            >
+              保存
+            </button>
+            <button
+              onClick={handleCopyLong}
+              disabled={saving}
+              style={{
+                background: saving ? '#d1d5db' : '#059669',
+                color: 'white',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? '处理中...' : '复制'}
+            </button>
+            <button
+              onClick={handleReSelect}
+              style={{ background: '#6b7280', color: 'white' }}
+            >
+              重选
+            </button>
+            <button
+              onClick={handleClose}
+              style={{ background: '#4b5563', color: 'white' }}
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -164,6 +359,13 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
             }}
           >
             {saving ? '处理中...' : '复制'}
+          </button>
+          <button
+            onClick={handleLongScreenshot}
+            style={{ background: '#7c3aed', color: 'white' }}
+            title="长截图：滚动截取下方内容"
+          >
+            长截图
           </button>
           <button
             onClick={handleReSelect}

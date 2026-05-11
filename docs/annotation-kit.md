@@ -99,10 +99,13 @@ const { exportSelectedAreaPng, copyToClipboard } = useExport('my-prefix');
 |------|------|
 | `ToolType` | 工具类型枚举（Rect, Circle, Arrow, Text, Label, Pen, Select, Delete） |
 | `DrawingStyle` | 绘图样式接口（color, weight, fontSize） |
-| `ScreenshotProvider` | 截图提供者接口（captureScreenshot 方法） |
+| `ScreenshotProvider` | 截图提供者接口（captureScreenshot, captureScreenshotAtScroll 方法） |
 | `ExportConfig` | 导出配置接口 |
 | `CustomProperty` | fabric 序列化自定义属性数组 |
 | `Direction` | resize 方向枚举 |
+| `LongScreenshotOptions` | 长截图选项接口（selectedRect, scrollStep, maxSteps） |
+| `LongScreenshotResult` | 长截图结果接口（dataUrl, steps, width, height） |
+| `LongScreenshotProgress` | 长截图进度接口（currentStep, totalSteps, isCapturing） |
 
 ### 核心
 
@@ -129,9 +132,17 @@ const { exportSelectedAreaPng, copyToClipboard } = useExport('my-prefix');
 | 名称 | 说明 |
 |------|------|
 | `useExport` | 导出 hook（exportSelectedAreaPng, copyToClipboard, exportJson） |
+| `useLongScreenshot` | 长截图 hook（startLongScreenshot, stopLongScreenshot, abortLongScreenshot, progress） |
 | `useKeyboardShortcuts` | Ctrl+Z/Y, Delete, Escape |
 | `useDrawingTool` | 绘图工具状态管理 |
 | `useSelection` | 选中对象状态管理 |
+
+### Utils
+
+| 名称 | 说明 |
+|------|------|
+| `cropScreenshot` | 截图裁剪（viewport screenshot → selectedRect crop） |
+| `stitchVertically` | 垂直拼接多段截图 + 批注叠加 |
 
 ### 组件
 

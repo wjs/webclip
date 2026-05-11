@@ -28,7 +28,7 @@ webclip/
   src/                           — webclip 扩展专属代码
     background/index.ts          — service worker：注入 content script，截图捕获
     content/index.tsx            — content script 入口：挂载 React overlay，监听 Chrome 消息
-    content/OverlayContainer.tsx — 两阶段 overlay（选区 → 批注），使用 annotation-kit 组件
+    content/OverlayContainer.tsx — 四阶段 overlay（选区 → 批注 → 长截图截取 → 长截图结果），使用 annotation-kit 组件
     store/extensionStore.ts      — 扩展状态（screenshotDataUrl），属于 webclip 不属于 annotation-kit
     styles.css                   — Tailwind 入口
 
@@ -39,7 +39,7 @@ webclip/
       vite.config.ts
       src/
         index.ts                 — barrel export（公开 API）
-        types.ts                 — ToolType, DrawingStyle, ScreenshotProvider 等
+        types.ts                 — ToolType, DrawingStyle, ScreenshotProvider, LongScreenshotOptions 等
         constants.ts             — COLOR_MAP, WEIGHT_MAP, FONT_SIZE_MAP 等
         fabric-ext.d.ts          — fabric.js 自定义类型声明
         AnnotationCanvas.ts      — fabric.Canvas 包装类（非单例）
@@ -59,11 +59,14 @@ webclip/
           Label.ts               — 标签类（圆角矩形 + 三角指针）
         hooks/
           useExport.ts           — 导出 hook（通过 ScreenshotProvider Context 获取截图）
+          useLongScreenshot.ts   — 长截图 hook（滚动 + 截取 + 拼接）
           useKeyboardShortcuts.ts — Ctrl+Z/Y, Delete, Escape
           useDrawingTool.ts
           useSelection.ts
         context/
           ScreenshotContext.tsx   — React Context，注入截图能力
+        utils/
+          stitchImages.ts        — 截图裁剪 + 垂直拼接
         components/
           AnnotationOverlay.tsx  — React 组件，创建 AnnotationCanvas 实例
           AnnotationToolbar.tsx  — 工具栏 + StylePicker
@@ -101,6 +104,17 @@ webclip/
 4. Background 调用 `chrome.tabs.captureVisibleTab()` 返回 PNG data URL
 5. Content script 裁剪选区区域 + 合成批注层 → 下载 PNG / 复制到剪贴板
 
+### 长截图导出流程
+
+1. 用户点击「长截图」按钮
+2. OverlayContainer 切换到 `'longCapturing'` phase，释放页面滚动锁
+3. `useLongScreenshot` hook 调用 `captureScreenshotAtScroll(initialScrollY)` 截取当前视口
+4. 循环：页面向下滚动 `selectedRect.height` → 等待渲染 → 截取视口 → 裁剪到选区范围
+5. 每步裁剪后的片段存入 `segments[]` 数组
+6. 用户点击「停止」或页面到达底部 → 停止循环
+7. `stitchVertically(segments, annotationCanvas)` 垂直拼接所有片段 + 批注叠加在首段
+8. 切换到 `'longResult'` phase → 显示预览 → 保存/复制
+
 ### 关闭与重触发
 
 - 关闭 overlay 时：React root unmount + host element remove，但 **content script 的消息监听器保留**
@@ -123,6 +137,7 @@ annotation-kit 不直接依赖 Chrome API。截图能力通过 React Context 注
 ```ts
 interface ScreenshotProvider {
   captureScreenshot(): Promise<string | null>;
+  captureScreenshotAtScroll?(scrollY: number): Promise<string | null>;
 }
 ```
 
@@ -158,6 +173,10 @@ annotation-kit 通过 `index.ts` 导出：
 
 **Phase 2 — 批注**：AnnotationOverlay 在选区内渲染 fabric canvas。4 个遮罩条带（上/下/左/右）形成 punch-hole 效果。工具栏在选区下方（空间不足时在上方）。
 
+**Phase 3 — 长截图截取**：用户点击「长截图」按钮，overlay 隐藏，页面滚动锁释放。页面按选区高度向下滚动，每步截取 viewport → 裁剪到选区范围 → 存入内存。底部显示进度（步数）和「停止」按钮。用户点击停止或页面到底时进入 Phase 4。
+
+**Phase 4 — 长截图结果**：所有裁剪片段垂直拼接为一张长图，批注叠加在第一个片段上。显示预览窗口，可保存 PNG 或复制到剪贴板。
+
 ## 关键设计决策
 
 | 问题 | 决策 | 原因 |
@@ -169,3 +188,6 @@ annotation-kit 通过 `index.ts` 导出：
 | 快照式 vs 操作式 undo/redo | 快照式 | canvas.toJSON/loadFromJSON，避免 Arrow/Label 反序列化 bug |
 | 扩展 UI | content script overlay | 直接在页面上标注，最自然的批注 UX |
 | ScreenshotProvider Context | React Context | 解耦 Chrome API，多组件共享，避免 prop 传递 |
+| 长截图实现 | 滚动+逐帧截取+拼接 | captureVisibleTab 只截取可见区域，需滚动多次拼接 |
+| 长截图截取位置 | ScreenshotProvider.captureScreenshotAtScroll | 解耦滚动逻辑，宿主项目控制滚动+截取时机 |
+| 长截图拼接 | 垂直直接拼接（无重叠裁剪） | 初版简单方案，避免复杂重叠检测算法 |
