@@ -63,6 +63,16 @@ pnpm build
 
 ## 安装扩展
 
+### 方式一：从 Release 下载（推荐）
+
+1. 到 [Releases](https://github.com/anthropics/webclip/releases) 页面下载最新版本的 `webclip-v*.zip`
+2. 解压 zip 文件
+3. Chrome 打开 `chrome://extensions/`，开启开发者模式
+4. 点击「加载已解压的扩展程序」，选择解压后的目录
+5. 工具栏出现 WebClip 图标，点击即可使用
+
+### 方式二：自行构建
+
 1. `pnpm build` 生成 `dist/` 目录
 2. Chrome 打开 `chrome://extensions/`，开启开发者模式
 3. 点击「加载已解压的扩展程序」，选择 `dist/` 目录
