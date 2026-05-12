@@ -5,7 +5,7 @@ import { ToolType } from '../types';
 export const ToolButton: React.FC<{
   tool: ToolType;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
 }> = ({ tool, label, icon }) => {
   const { activeTool, setActiveTool } = useAnnotationStore();
 
