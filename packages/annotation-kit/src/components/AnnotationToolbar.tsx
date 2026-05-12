@@ -13,6 +13,9 @@ import {
   DeleteIcon,
   UndoIcon,
   RedoIcon,
+  WeightSmallIcon,
+  WeightMediumIcon,
+  WeightLargeIcon,
 } from './icons';
 
 const TOOL_CONFIG: { tool: ToolType; label: string; tooltip: string; icon: React.ReactNode }[] = [
@@ -26,51 +29,61 @@ const TOOL_CONFIG: { tool: ToolType; label: string; tooltip: string; icon: React
   { tool: ToolType.Delete, label: 'Delete', tooltip: '删除 (D)', icon: <DeleteIcon /> },
 ];
 
+const WEIGHT_CONFIG: { weight: number; label: string; tooltip: string; icon: React.ReactNode }[] = [
+  { weight: 2, label: '小', tooltip: '小', icon: <WeightSmallIcon /> },
+  { weight: 4, label: '中', tooltip: '中', icon: <WeightMediumIcon /> },
+  { weight: 8, label: '大', tooltip: '大', icon: <WeightLargeIcon /> },
+];
+
 export const AnnotationToolbar: React.FC = () => {
   const { activeTool, style, canUndo, canRedo, setActiveTool, setStyle } =
     useAnnotationStore();
 
+  const showStylePicker = activeTool !== ToolType.Select && activeTool !== ToolType.Delete;
+
   return (
-    <div className="ak-toolbar">
-      {/* Undo */}
-      <button
-        className={canUndo ? '' : 'disabled'}
-        onClick={() => document.dispatchEvent(new CustomEvent('ak-undo'))}
-        disabled={!canUndo}
-        data-tooltip="撤销 (Ctrl+Z)"
-      >
-        <UndoIcon />
-      </button>
-      {/* Redo */}
-      <button
-        className={canRedo ? '' : 'disabled'}
-        onClick={() => document.dispatchEvent(new CustomEvent('ak-redo'))}
-        disabled={!canRedo}
-        data-tooltip="重做 (Ctrl+Y)"
-      >
-        <RedoIcon />
-      </button>
-
-      <div className="ak-divider" />
-
-      {/* Tool buttons */}
-      {TOOL_CONFIG.map(({ tool, icon, tooltip }) => (
+    <div className="ak-toolbar-wrap">
+      {/* Row 1: Tools */}
+      <div className="ak-toolbar">
+        {/* Undo */}
         <button
-          key={tool}
-          className={activeTool === tool ? 'active' : ''}
-          onClick={() => setActiveTool(tool)}
-          data-tooltip={tooltip}
+          className={canUndo ? '' : 'disabled'}
+          onClick={() => document.dispatchEvent(new CustomEvent('ak-undo'))}
+          disabled={!canUndo}
+          data-tooltip="撤销 (Ctrl+Z)"
         >
-          {icon}
+          <UndoIcon />
         </button>
-      ))}
+        {/* Redo */}
+        <button
+          className={canRedo ? '' : 'disabled'}
+          onClick={() => document.dispatchEvent(new CustomEvent('ak-redo'))}
+          disabled={!canRedo}
+          data-tooltip="重做 (Ctrl+Y)"
+        >
+          <RedoIcon />
+        </button>
 
-      {/* Style picker */}
-      {activeTool !== ToolType.Select && activeTool !== ToolType.Delete && (
-        <>
-          <div className="ak-divider" />
+        <div className="ak-divider" />
+
+        {/* Tool buttons */}
+        {TOOL_CONFIG.map(({ tool, icon, tooltip }) => (
+          <button
+            key={tool}
+            className={activeTool === tool ? 'active' : ''}
+            onClick={() => setActiveTool(tool)}
+            data-tooltip={tooltip}
+          >
+            {icon}
+          </button>
+        ))}
+      </div>
+
+      {/* Row 2: Style picker */}
+      {showStylePicker && (
+        <div className="ak-style-row">
           <StylePicker style={style} onStyleChange={setStyle} />
-        </>
+        </div>
       )}
     </div>
   );
@@ -82,9 +95,10 @@ const StylePicker: React.FC<{
 }> = ({ style, onStyleChange }) => {
   const activeTool = useAnnotationStore.getState().activeTool;
   const showFontSize = activeTool === ToolType.Text || activeTool === ToolType.Label;
+  const showWeight = activeTool !== ToolType.Text && activeTool !== ToolType.Label;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="ak-style-picker">
       {/* Colors */}
       {COLOR_MAP.map((color) => (
         <button
@@ -96,15 +110,19 @@ const StylePicker: React.FC<{
         />
       ))}
 
+      <div className="ak-divider" />
+
+      {showWeight && <div className="ak-divider" />}
+
       {/* Weight */}
-      {WEIGHT_MAP.map((weight) => (
+      {showWeight && WEIGHT_CONFIG.map(({ weight, label, tooltip, icon }) => (
         <button
           key={weight}
           className={`ak-weight ${style.weight === weight ? 'active' : ''}`}
           onClick={() => onStyleChange({ weight })}
-          data-tooltip={`线宽 ${weight}`}
+          data-tooltip={tooltip}
         >
-          <div className="ak-weight-dot" style={{ width: Math.max(weight * 1.5, 3), height: Math.max(weight * 1.5, 3) }} />
+          {icon}
         </button>
       ))}
 

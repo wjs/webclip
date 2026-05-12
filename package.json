@@ -1,11 +1,11 @@
 {
   "name": "webclip",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "cd packages/annotation-kit && pnpm run build && cd ../.. && tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

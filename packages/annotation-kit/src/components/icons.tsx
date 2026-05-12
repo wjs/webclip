@@ -73,3 +73,24 @@ export const RedoIcon: React.FC = () => (
     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
   </svg>
 );
+
+// Weight icons — filled circles of different sizes
+const weightIconProps = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'currentColor', stroke: 'none' };
+
+export const WeightSmallIcon: React.FC = () => (
+  <svg {...weightIconProps}>
+    <circle cx="12" cy="12" r="4" />
+  </svg>
+);
+
+export const WeightMediumIcon: React.FC = () => (
+  <svg {...weightIconProps}>
+    <circle cx="12" cy="12" r="7" />
+  </svg>
+);
+
+export const WeightLargeIcon: React.FC = () => (
+  <svg {...weightIconProps}>
+    <circle cx="12" cy="12" r="10" />
+  </svg>
+);

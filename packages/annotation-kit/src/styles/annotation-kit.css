@@ -7,14 +7,16 @@
 .ak-select-border {
   position: absolute;
   border: 2px solid #3b82f6;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5), 0 0 6px rgba(59, 130, 246, 0.4);
+  box-shadow:
+    0 0 0 1px rgba(59, 130, 246, 0.5),
+    0 0 6px rgba(59, 130, 246, 0.4);
 }
 /* Size label */
 .ak-size-label {
   position: absolute;
   font-size: 12px;
   color: white;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -26,11 +28,17 @@
   transform: translate(-50%, -50%);
   color: white;
   font-size: 18px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   padding: 12px 24px;
   border-radius: 8px;
 }
-/* Toolbar */
+/* Toolbar wrap — two rows */
+.ak-toolbar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* Toolbar row */
 .ak-toolbar {
   display: flex;
   align-items: center;
@@ -38,7 +46,7 @@
   padding: 6px 8px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   border: 1px solid #d1d5db;
   font-size: 14px;
 }
@@ -54,9 +62,18 @@
   justify-content: center;
   position: relative;
 }
-.ak-toolbar button:hover { background: #f3f4f6; color: #1f2937; }
-.ak-toolbar button.active { background: #dbeafe; color: #1d4ed8; }
-.ak-toolbar button.disabled { color: #9ca3af; cursor: default; }
+.ak-toolbar button:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+.ak-toolbar button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.ak-toolbar button.disabled {
+  color: #9ca3af;
+  cursor: default;
+}
 .ak-toolbar button[data-tooltip]:not(.disabled)::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -83,35 +100,98 @@
   height: 20px;
   background: #d1d5db;
 }
-/* Color dot */
-.ak-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid #d1d5db;
-  cursor: pointer;
+/* Style picker row */
+.ak-style-row {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
-.ak-color.active { border-color: #3b82f6; }
-/* Weight dot */
+.ak-style-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ak-style-picker button {
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.ak-style-picker button:hover {
+  background: #f3f4f6;
+}
+.ak-style-picker button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.ak-style-picker button[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px;
+  border-radius: 4px;
+  background: #1f2937;
+  color: white;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.ak-style-picker button[data-tooltip]:hover::after {
+  opacity: 1;
+}
+/* Color dot */
+.ak-style-picker .ak-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  box-sizing: content-box;
+  background-color: unset;
+}
+.ak-style-picker .ak-color.active {
+  border-color: transparent;
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+.ak-style-picker .ak-color:hover {
+  background-color: unset;
+}
+/* Weight */
 .ak-weight {
-  width: 20px;
-  height: 20px;
+  padding: 6px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
-.ak-weight.active { background: #dbeafe; }
-.ak-weight-dot {
-  border-radius: 50%;
-  background: #374151;
+.ak-weight.active {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 /* Action buttons */
 .ak-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: 6px;
 }
 .ak-actions button {
   padding: 6px 12px;
@@ -130,7 +210,7 @@
   background: white;
   padding: 12px 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   gap: 12px;
