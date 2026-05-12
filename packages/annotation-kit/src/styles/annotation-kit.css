@@ -194,12 +194,34 @@
   margin-top: 6px;
 }
 .ak-actions button {
+  position: relative;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   border: none;
+}
+.ak-actions button[data-tooltip]:not(:disabled)::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #1f2937;
+  color: white;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+}
+.ak-actions button[data-tooltip]:not(:disabled):hover::after {
+  opacity: 1;
 }
 /* Long screenshot progress */
 .ak-long-progress {

@@ -91,19 +91,6 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     setLongResult(null);
   }, [phase, abortLongScreenshot]);
 
-  // ESC to close overlay at any phase (selecting phase handled by AreaSelector)
-  useEffect(() => {
-    if (phase === "selecting") return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [phase, handleClose]);
-
   const handleCopy = useCallback(async () => {
     if (!selectedRect || saving) return;
     setSaving(true);
@@ -145,6 +132,30 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     }
     setSaving(false);
   }, [selectedRect, saving, exportSelectedAreaPng, onClose]);
+
+  // Keyboard shortcuts: ESC to close, Ctrl/Cmd+S to save, Ctrl/Cmd+C to copy
+  useEffect(() => {
+    if (phase === "selecting") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      }
+      // Skip Ctrl/Cmd shortcuts when user is typing in a text field (including fabric's hiddenTextarea)
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        if (phase === "annotating" && !saving) handleSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        e.preventDefault();
+        if (phase === "annotating" && !saving) handleCopy();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, handleClose, handleSave, handleCopy, saving]);
 
   // --- Long screenshot handlers ---
   const handleLongScreenshot = useCallback(async () => {
@@ -392,6 +403,7 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
           <button
             onClick={handleSave}
             disabled={saving}
+            data-tooltip={saving ? undefined : "保存 (Ctrl+S)"}
             style={{
               background: saving ? "#93c5fd" : "#2563eb",
               color: "white",
@@ -403,6 +415,7 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
           <button
             onClick={handleCopy}
             disabled={saving}
+            data-tooltip={saving ? undefined : "复制 (Ctrl+C)"}
             style={{
               background: saving ? "#d1d5db" : "#059669",
               color: "white",

@@ -393,32 +393,62 @@ export class AnnotationCanvas {
 
   // --- Keyboard handler ---
   private onKeyDown(e: KeyboardEvent): void {
+    // Skip shortcuts when user is typing in a text field
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    // Skip shortcuts when an IText on canvas is in editing mode
+    const activeObject = this.canvas.getActiveObject();
+    const isEditingText = activeObject instanceof fabric.IText && activeObject.isEditing;
+
     // Undo: Ctrl+Z
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       this.undo();
+      return;
     }
     // Redo: Ctrl+Y or Ctrl+Shift+Z
     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
       e.preventDefault();
       this.redo();
+      return;
     }
     // Delete: Delete key
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const activeObject = this.canvas.getActiveObject();
-      if (activeObject && !(activeObject instanceof fabric.IText && activeObject.isEditing)) {
+      if (activeObject && !isEditingText) {
         e.preventDefault();
         this.pushUndoSnapshot();
         this.canvas.remove(activeObject);
         this.canvas.discardActiveObject();
         this.canvas.renderAll();
       }
+      return;
     }
-    // Escape: close overlay
+    // Escape: deselect active object
     if (e.key === 'Escape') {
-      // The OverlayContainer handles closing — this just deselects
       this.canvas.discardActiveObject();
       this.canvas.renderAll();
+      return;
+    }
+
+    // Tool-switching shortcuts (only when not editing text and no modifier keys)
+    if (isEditingText || e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const TOOL_KEY_MAP: Record<string, ToolType> = {
+      v: ToolType.Select,
+      r: ToolType.Rect,
+      c: ToolType.Circle,
+      a: ToolType.Arrow,
+      t: ToolType.Text,
+      l: ToolType.Label,
+      p: ToolType.Pen,
+      d: ToolType.Delete,
+    };
+
+    const tool = TOOL_KEY_MAP[e.key.toLowerCase()];
+    if (tool) {
+      e.preventDefault();
+      useAnnotationStore.getState().setActiveTool(tool);
     }
   }
 
