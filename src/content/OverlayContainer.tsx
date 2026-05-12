@@ -82,6 +82,19 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     setLongResult(null);
   }, [phase, abortLongScreenshot]);
 
+  // ESC to close overlay at any phase (selecting phase handled by AreaSelector)
+  useEffect(() => {
+    if (phase === 'selecting') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, handleClose]);
+
   const handleCopy = useCallback(async () => {
     if (!selectedRect || saving) return;
     setSaving(true);
