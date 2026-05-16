@@ -9,7 +9,7 @@ import {
   useExport,
   useLongScreenshot,
 } from "annotation-kit";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface OverlayContainerProps {
   onClose: () => void;
@@ -37,6 +37,11 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     isCapturing: false,
   });
   const annotationCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const toolbarWrapRef = useRef<HTMLDivElement | null>(null);
+  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number }>({
+    left: 0,
+    top: 0,
+  });
 
   const { exportSelectedAreaPng, copyToClipboard } = useExport("webclip");
   const {
@@ -156,6 +161,29 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [phase, handleClose, handleSave, handleCopy, saving]);
+
+  // Dynamic toolbar positioning — compute after render so we can measure toolbar width
+  useLayoutEffect(() => {
+    if (phase !== "annotating" || !selectedRect) return;
+    const el = toolbarWrapRef.current;
+    if (!el) return;
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const gap = 8;
+    const r = selectedRect;
+
+    let top = r.y + r.height + gap;
+    if (top + th > vh) top = r.y - th - gap;
+    if (top < 0) top = 0;
+
+    let left = r.x;
+    if (left + tw > vw) left = vw - tw - 4;
+    if (left < 0) left = 4;
+
+    setToolbarPos({ left, top });
+  }, [phase, selectedRect]);
 
   // --- Long screenshot handlers ---
   const handleLongScreenshot = useCallback(async () => {
@@ -339,8 +367,6 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
   if (!selectedRect) return null;
 
   const r = selectedRect;
-  const toolbarFitsBelow = r.y + r.height + 80 < window.innerHeight;
-  const toolbarTop = toolbarFitsBelow ? r.y + r.height + 8 : r.y - 88 - 8;
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
@@ -386,12 +412,13 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
         <AnnotationOverlay canvasWidth={r.width} canvasHeight={r.height} />
       </div>
 
-      {/* Toolbar + action buttons below the selection */}
+      {/* Toolbar + action buttons */}
       <div
+        ref={toolbarWrapRef}
         style={{
           position: "absolute",
-          left: r.x,
-          top: toolbarTop,
+          left: toolbarPos.left,
+          top: toolbarPos.top,
           zIndex: 20,
           display: "flex",
           alignItems: "flex-start",
