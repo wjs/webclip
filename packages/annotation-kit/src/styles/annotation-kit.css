@@ -62,6 +62,38 @@
   justify-content: center;
   position: relative;
 }
+.ak-toolbar button.ak-color {
+  width: 16px;
+  height: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background-color: unset;
+  box-sizing: content-box;
+}
+.ak-toolbar button.ak-color.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+.ak-toolbar button.ak-color:hover {
+  background-color: unset;
+}
+.ak-toolbar button.ak-weight {
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.ak-toolbar button.ak-weight.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.ak-toolbar button.ak-weight:hover {
+  background: #f3f4f6;
+}
 .ak-toolbar button:hover {
   background: #f3f4f6;
   color: #1f2937;
@@ -116,7 +148,7 @@
   gap: 4px;
 }
 .ak-style-picker button {
-  padding: 4px;
+  padding: 2px;
   border-radius: 4px;
   cursor: pointer;
   border: none;
@@ -155,8 +187,8 @@
 .ak-style-picker button[data-tooltip]:hover::after {
   opacity: 1;
 }
-/* Color dot */
-.ak-style-picker .ak-color {
+/* Color dot (for ak-style-picker standalone usage) */
+button.ak-color {
   width: 12px;
   height: 12px;
   border-radius: 4px;
@@ -165,12 +197,13 @@
   box-sizing: content-box;
   background-color: unset;
 }
-.ak-style-picker .ak-color.active {
+button.ak-color.active {
   border-color: transparent;
   outline: 2px solid #3b82f6;
   outline-offset: 1px;
 }
-.ak-style-picker .ak-color:hover {
+.ak-toolbar .ak-color:hover,
+button.ak-color:hover {
   background-color: unset;
 }
 /* Weight */

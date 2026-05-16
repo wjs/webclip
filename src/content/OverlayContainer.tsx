@@ -10,6 +10,7 @@ import {
   useLongScreenshot,
 } from "annotation-kit";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { pinToPage } from "./pinToPage";
 
 interface OverlayContainerProps {
   onClose: () => void;
@@ -43,7 +44,7 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     top: 0,
   });
 
-  const { exportSelectedAreaPng, copyToClipboard } = useExport("webclip");
+  const { exportSelectedAreaPng, copyToClipboard, getMergedDataUrl } = useExport("webclip");
   const {
     startLongScreenshot,
     stopLongScreenshot,
@@ -137,6 +138,30 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
     }
     setSaving(false);
   }, [selectedRect, saving, exportSelectedAreaPng, onClose]);
+
+  const handlePin = useCallback(async () => {
+    if (!selectedRect || saving) return;
+    setSaving(true);
+
+    const canvasEl = document.querySelector(
+      "#ak-canvas",
+    ) as HTMLCanvasElement | null;
+    const lowerCanvas = canvasEl?.parentElement?.querySelector(
+      ".lower-canvas",
+    ) as HTMLCanvasElement | null;
+    const annotationCanvas = lowerCanvas || canvasEl;
+
+    try {
+      const dataUrl = await getMergedDataUrl(selectedRect, annotationCanvas, 1);
+      if (dataUrl) {
+        pinToPage(dataUrl, selectedRect.width, selectedRect.height, selectedRect.x, selectedRect.y);
+        onClose();
+      }
+    } catch (err) {
+      console.error("Pin failed:", err);
+    }
+    setSaving(false);
+  }, [selectedRect, saving, getMergedDataUrl, onClose]);
 
   // Keyboard shortcuts: ESC to close, Ctrl/Cmd+S to save, Ctrl/Cmd+C to copy
   useEffect(() => {
@@ -370,13 +395,7 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
-      {/* Full-screen mask */}
-      <div
-        className="ak-mask"
-        style={{ top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-
-      {/* Punch hole: 4 mask strips around the selected area */}
+      {/* 4 mask strips around the selected area (no full-screen mask — keeps screenshot clean) */}
       <div
         className="ak-mask"
         style={{ top: 0, left: 0, right: 0, height: r.y }}
@@ -421,8 +440,9 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
           top: toolbarPos.top,
           zIndex: 20,
           display: "flex",
+          flexDirection: "column",
           alignItems: "flex-start",
-          gap: 8,
+          gap: 6,
         }}
       >
         <AnnotationToolbar />
@@ -450,6 +470,18 @@ export const OverlayContainer: React.FC<OverlayContainerProps> = ({
             }}
           >
             {saving ? "处理中..." : "复制"}
+          </button>
+          <button
+            onClick={handlePin}
+            disabled={saving}
+            data-tooltip={saving ? undefined : "钉住"}
+            style={{
+              background: saving ? "#d1d5db" : "#f59e0b",
+              color: "white",
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? "处理中..." : "钉住"}
           </button>
           <button
             onClick={handleLongScreenshot}

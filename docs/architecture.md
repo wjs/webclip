@@ -177,6 +177,17 @@ annotation-kit 通过 `index.ts` 导出：
 
 **Phase 4 — 长截图结果**：所有裁剪片段垂直拼接为一张长图，批注叠加在第一个片段上。显示预览窗口，可保存 PNG 或复制到剪贴板。
 
+### 钉住截图
+
+用户点击「钉住」按钮后：
+1. `useExport` 生成合并 PNG data URL（截图 + 批注）
+2. `pinToPage()` 创建纯 DOM 元素（非 React）挂载到 `document.body`
+3. Overlay 关闭（React root 销毁），钉住的图片独立存活
+4. 钉住元素为 `position: fixed` 的 wrapper div，尺寸等于图片尺寸，z-index 为 999999
+5. 拖拽通过 mousedown/mousemove/mouseup 实现（close button 的 mousedown 不触发拖拽）
+6. 右上方有 close 按钮（X），点击移除钉住元素
+7. wrapper div 仅为图片大小，外部区域不受影响，click 自然穿透到页面
+
 ## 关键设计决策
 
 | 问题 | 决策 | 原因 |
@@ -191,3 +202,4 @@ annotation-kit 通过 `index.ts` 导出：
 | 长截图实现 | 滚动+逐帧截取+拼接 | captureVisibleTab 只截取可见区域，需滚动多次拼接 |
 | 长截图截取位置 | ScreenshotProvider.captureScreenshotAtScroll | 解耦滚动逻辑，宿主项目控制滚动+截取时机 |
 | 长截图拼接 | 垂直直接拼接（无重叠裁剪） | 初版简单方案，避免复杂重叠检测算法 |
+| 钉住截图 | 纯 DOM 元素（非 React root） | overlay 关闭时 React root 被销毁，钉住的图片需要脱离 React 生命周期独立存活；使用 position:fixed + mousedown/mousemove/mouseup 实现拖拽；wrapper div 仅为图片尺寸，外部区域自然 click-through |
