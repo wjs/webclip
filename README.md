@@ -5,6 +5,7 @@
 ## 功能
 
 - 点击扩展按钮，拖拽选择截图区域
+- 快捷键唤起截图：默认 `Ctrl+Shift+S`（Mac 上 `Command+Shift+S`），可自定义
 - 在选区内绘制批注：矩形、圆形、箭头、文字、标签、画笔
 - 钉住截图到页面上方，可拖拽移动，不影响页面操作
 - 长截图：滚动截取选区下方内容，拼接为一张长图
@@ -87,6 +88,24 @@ pnpm build
 2. Chrome 打开 `chrome://extensions/`，开启开发者模式
 3. 点击「加载已解压的扩展程序」，选择 `dist/` 目录
 4. 工具栏出现 WebClip 图标，点击即可使用
+
+### 自定义快捷键
+
+1. 右键点击扩展图标，选择「选项」打开设置页面
+2. 点击「打开快捷键设置」跳转到 Chrome 快捷键设置页面
+3. 修改 WebClip 的快捷键（Chrome 要求包含 Ctrl/Cmd + Shift 的组合）
+
+快捷键功能详见 [docs/keyboard-shortcuts.md](docs/keyboard-shortcuts.md)。
+
+### overlay 内部快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| Esc | 关闭 overlay / 取消选择 |
+| Ctrl/Cmd+S | 保存截图为 PNG |
+| Ctrl/Cmd+C | 复制截图到剪贴板 |
+| Ctrl/Cmd+Z | 撤销 |
+| v r c a t l p d | 切换标注工具（选择/矩形/圆形/箭头/文字/标签/画笔/删除） |
 
 ## 技术栈
 

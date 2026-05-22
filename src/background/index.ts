@@ -1,5 +1,12 @@
 // Background service worker for WebClip extension
 
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    chrome.action.setBadgeText({ text: '⌨' });
+    chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
+  }
+});
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (!tab.id) return;
 

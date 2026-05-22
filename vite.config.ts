@@ -7,7 +7,24 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [
     react(),
-    crx({ manifest }),
+    crx({
+      manifest,
+      manifestTransform(manifest) {
+        manifest.commands = {
+          _execute_action: {
+            suggested_key: {
+              default: 'Ctrl+Shift+S',
+              mac: 'Command+Shift+S',
+            },
+            description: '启动截图标注',
+          },
+        };
+        if (!manifest.permissions.includes('storage')) {
+          manifest.permissions.push('storage');
+        }
+        return manifest;
+      },
+    }),
   ],
   build: {
     rollupOptions: {
